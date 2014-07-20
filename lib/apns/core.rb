@@ -20,7 +20,9 @@ module APNS
 
   def self.send_notifications(notifications)
     raise "The path to your pem file is not set. (APNS.pem = /path/to/cert.pem)" unless self.pems
-    raise "The path to your pem file does not exist!" unless File.exist?(self.pems)
+    self.pems.each do |pem|
+      raise "The path to your pem file does not exist!" unless File.exist?(pem)
+    end
 
     self.pems.each_with_index do |pem, i|
       pass = self.passes[i]
