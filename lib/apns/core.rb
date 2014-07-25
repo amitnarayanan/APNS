@@ -6,35 +6,30 @@ module APNS
   @host = 'gateway.sandbox.push.apple.com'
   @port = 2195
   # openssl pkcs12 -in mycert.p12 -out client-cert.pem -nodes -clcerts
-  @pems = nil # this should be the path of the pem file not the contentes
+  @pems = nil # this should be a hash of target devices and paths of pem files, not pem's contents
   @passes = nil
 
   class << self
     attr_accessor :host, :pems, :port, :passes
   end
 
-  def self.send_notification(device_token, message)
+  def self.send_notification(device_token, message, target)
     n = APNS::Notification.new(device_token, message)
-    self.send_notifications([n])
+    self.send_notifications([n], target)
   end
 
-  def self.send_notifications(notifications)
-    raise "The path to your pem file is not set. (APNS.pem = /path/to/cert.pem)" unless self.pems
-    self.pems.each do |pem|
-      raise "The path to your pem file does not exist!" unless File.exist?(pem)
-    end
+  def self.send_notifications(notifications, target)
+    raise "The path to your pem file is not set. (APNS.pems = { target1: '/path/to/cert1.pem', target2: '/path/to/cert2.pem' }" unless self.pems
+    raise "The path to your #{target} pem file does not exist!" unless File.exist?(self.pems[target])
 
-    self.pems.each_with_index do |pem, i|
-      pass = self.passes[i]
-      sock, ssl = self.open_connection(pem, pass, self.host, self.port)
+    sock, ssl = self.open_connection(self.pems[target], self.passes[target], self.host, self.port)
 
-      packed_nofications = self.packed_nofications(notifications)
+    packed_nofications = self.packed_nofications(notifications)
 
-      notifications.each { |n| ssl.write(packed_nofications) }
+    notifications.each { |n| ssl.write(packed_nofications) }
 
-      ssl.close
-      sock.close
-    end
+    ssl.close
+    sock.close
   end
 
   def self.packed_nofications(notifications)
